@@ -15,6 +15,8 @@ import com.hbr.reggie.service.SetmealDishService;
 import com.hbr.reggie.service.SetmealService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -43,6 +45,7 @@ public class SetmealController {
     }
 
     @PostMapping
+    @CacheEvict(value = "setmeal", allEntries = true)
     public R<String> save(@RequestBody SetmealDto setmealDto) {
         log.info("保存套餐信息：{}", setmealDto.toString());
         setmealService.saveWithDish(setmealDto);
@@ -50,7 +53,8 @@ public class SetmealController {
     }
 
     @GetMapping("/{id}")
-    public R<SetmealDto> getById(@PathVariable String id){
+    @Cacheable(value = "setmeal", key = "#id")
+    public R<SetmealDto> getById(@PathVariable String id) {
         Setmeal setmeal = setmealService.getById(id);
         SetmealDto setmealDto = new SetmealDto();
         BeanUtils.copyProperties(setmeal, setmealDto);
@@ -90,11 +94,12 @@ public class SetmealController {
     }
 
     @DeleteMapping
+    @CacheEvict(value = "setmeal", allEntries = true)
     public R<String> delete(@RequestParam List<Long> ids) {
         log.info("删除套餐信息：{}", ids.toString());
         try {
             setmealService.removeWithDish(ids);
-        }catch (CustomException e){
+        } catch (CustomException e) {
             return R.error(e.getMessage());
         }
         return R.success("删除套餐成功");
@@ -113,6 +118,7 @@ public class SetmealController {
     }
 
     @GetMapping("/list")
+    @Cacheable(value = "setmeal", key = "#setmeal.categoryId+'_'+#setmeal.status")
     public R<List<Setmeal>> list(Setmeal setmeal) {
         LambdaQueryWrapper<Setmeal> setmealLambdaQueryWrapper = new LambdaQueryWrapper<>();
         setmealLambdaQueryWrapper.eq(setmeal.getCategoryId() != null, Setmeal::getCategoryId, setmeal.getCategoryId());
